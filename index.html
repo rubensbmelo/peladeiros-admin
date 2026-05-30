@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin — Peladeiros FTV</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #0f0f0f;
+            color: #f0f0f0;
+            min-height: 100vh;
+        }
+
+        header {
+            background: #1a1a1a;
+            border-bottom: 3px solid #f5c518;
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        header h1 { font-size: 18px; font-weight: 700; color: #f5c518; text-transform: uppercase; letter-spacing: 1px; }
+        header span { font-size: 12px; color: #666; }
+
+        .container { max-width: 700px; margin: 0 auto; padding: 28px 20px; }
+
+        /* STEPS */
+        .steps { display: flex; margin-bottom: 32px; }
+        .step { flex: 1; text-align: center; position: relative; }
+        .step::after { content: ''; position: absolute; top: 15px; left: 50%; width: 100%; height: 2px; background: #2a2a2a; z-index: 0; }
+        .step:last-child::after { display: none; }
+        .step-dot { width: 30px; height: 30px; border-radius: 50%; background: #2a2a2a; color: #555; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; margin: 0 auto 6px; position: relative; z-index: 1; transition: all 0.3s; }
+        .step.active .step-dot { background: #f5c518; color: #000; }
+        .step.done .step-dot { background: #22c55e; color: #fff; }
+        .step-lbl { font-size: 10px; color: #555; text-transform: uppercase; letter-spacing: 0.5px; }
+        .step.active .step-lbl { color: #f5c518; }
+        .step.done .step-lbl { color: #22c55e; }
+
+        /* CARDS */
+        .card { background: #1a1a1a; border: 1px solid #252525; border-radius: 12px; padding: 24px; margin-bottom: 16px; }
+        .card-title { font-size: 13px; font-weight: 700; color: #f5c518; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 18px; }
+
+        /* UPLOAD */
+        .drop-zone { border: 2px dashed #2a2a2a; border-radius: 10px; padding: 36px 20px; text-align: center; cursor: pointer; position: relative; transition: all 0.2s; }
+        .drop-zone:hover, .drop-zone.over { border-color: #f5c518; background: rgba(245,197,24,0.04); }
+        .drop-zone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+        .drop-icon { font-size: 44px; margin-bottom: 10px; }
+        .drop-zone strong { display: block; font-size: 15px; color: #f0f0f0; margin-bottom: 4px; }
+        .drop-zone p { font-size: 13px; color: #666; }
+        .preview { max-width: 100%; max-height: 280px; border-radius: 8px; margin-top: 16px; border: 1px solid #2a2a2a; display: none; }
+
+        /* BTN */
+        .btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 14px; border-radius: 8px; font-size: 14px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; border: none; cursor: pointer; transition: all 0.2s; }
+        .btn:disabled { opacity: 0.35; cursor: not-allowed; }
+        .btn-yellow { background: #f5c518; color: #000; }
+        .btn-yellow:hover:not(:disabled) { background: #ffd740; }
+        .btn-green { background: #22c55e; color: #fff; }
+        .btn-green:hover:not(:disabled) { background: #16a34a; }
+        .btn-ghost { background: transparent; color: #888; border: 1px solid #2a2a2a; }
+        .btn-ghost:hover { border-color: #555; color: #f0f0f0; }
+        .btn-row { display: flex; gap: 10px; margin-top: 20px; }
+        .btn-row .btn-ghost { flex: 1; }
+        .btn-row .btn-green { flex: 2; }
+
+        /* LOADING */
+        .loading { display: none; text-align: center; padding: 40px 20px; }
+        .loading.show { display: block; }
+        .spin { width: 36px; height: 36px; border: 3px solid #2a2a2a; border-top-color: #f5c518; border-radius: 50%; animation: spin 0.7s linear infinite; margin: 0 auto 14px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loading p { color: #888; font-size: 14px; }
+
+        /* JOGOS */
+        .jogo { display: flex; align-items: center; gap: 8px; padding: 9px 12px; background: #111; border: 1px solid #1e1e1e; border-radius: 8px; margin-bottom: 7px; font-size: 13px; }
+        .jogo-n { font-size: 10px; color: #444; width: 22px; flex-shrink: 0; }
+        .jogo-t { flex: 1; }
+        .jogo-t.w { color: #f5c518; font-weight: 600; }
+        .jogo-t.l { color: #555; }
+        .placar { background: #1a1a1a; border: 1px solid #252525; padding: 3px 10px; border-radius: 6px; font-family: monospace; font-size: 12px; font-weight: 700; min-width: 68px; text-align: center; }
+        .sw { color: #22c55e; }
+        .sl { color: #ef4444; }
+
+        .data-tag { display: inline-block; background: #f5c518; color: #000; font-size: 12px; font-weight: 700; padding: 3px 12px; border-radius: 20px; margin-bottom: 16px; }
+        .count { font-size: 12px; color: #666; margin-bottom: 14px; }
+        .count strong { color: #f5c518; }
+
+        .divider { border: none; border-top: 1px solid #1e1e1e; margin: 18px 0; }
+        .section-sm { font-size: 11px; color: #444; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+
+        .rank-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: #111; border: 1px solid #1e1e1e; border-radius: 8px; margin-bottom: 6px; font-size: 13px; }
+        .rank-delta { color: #22c55e; font-weight: 700; font-family: monospace; }
+
+        .alert { padding: 11px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 14px; display: none; }
+        .alert.show { display: block; }
+        .alert-err { background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.25); color: #fca5a5; }
+        .alert-info { background: rgba(245,197,24,0.08); border: 1px solid rgba(245,197,24,0.2); color: #fde68a; font-size: 12px; }
+
+        /* SUCCESS */
+        .success { display: none; text-align: center; padding: 48px 20px; }
+        .success.show { display: block; }
+        .success-icon { font-size: 60px; margin-bottom: 14px; }
+        .success h2 { color: #22c55e; font-size: 22px; margin-bottom: 8px; }
+        .success p { color: #888; font-size: 14px; margin-bottom: 6px; }
+        .success a { color: #f5c518; font-weight: 600; text-decoration: none; }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>Peladeiros FTV <span>— Admin</span></h1>
+</header>
+
+<div class="container">
+
+    <div class="steps">
+        <div class="step active" id="s1"><div class="step-dot">1</div><div class="step-lbl">Foto</div></div>
+        <div class="step" id="s2"><div class="step-dot">2</div><div class="step-lbl">IA</div></div>
+        <div class="step" id="s3"><div class="step-dot">3</div><div class="step-lbl">Confirmar</div></div>
+        <div class="step" id="s4"><div class="step-dot">4</div><div class="step-lbl">Publicar</div></div>
+    </div>
+
+    <div class="alert alert-err" id="alertBox"></div>
+
+    <!-- UPLOAD -->
+    <div id="panelUpload">
+        <div class="card">
+            <div class="card-title">📷 Foto da planilha</div>
+            <div class="drop-zone" id="dropZone">
+                <input type="file" id="fileInput" accept="image/*">
+                <div id="dropContent">
+                    <div class="drop-icon">📋</div>
+                    <strong>Toque para selecionar a foto</strong>
+                    <p>JPG, PNG ou qualquer imagem</p>
+                </div>
+                <img id="previewImg" class="preview">
+            </div>
+        </div>
+
+        <button class="btn btn-yellow" id="btnInterpretar" disabled>
+            ✨ Interpretar com IA
+        </button>
+    </div>
+
+    <!-- LOADING -->
+    <div class="loading" id="panelLoading">
+        <div class="spin"></div>
+        <p id="loadingMsg">Processando...</p>
+    </div>
+
+    <!-- CONFIRMAR -->
+    <div id="panelConfirm" style="display:none">
+        <div class="card">
+            <div class="card-title">✅ Confirmar jogos</div>
+            <div id="confirmContent"></div>
+            <div class="btn-row">
+                <button class="btn btn-ghost" onclick="reset()">↩ Refazer</button>
+                <button class="btn btn-green" id="btnPublicar">🚀 Publicar no site</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SUCCESS -->
+    <div class="success" id="panelSuccess">
+        <div class="success-icon">🏆</div>
+        <h2>Publicado!</h2>
+        <p>O site será atualizado em instantes.</p>
+        <p><a href="https://rubensbmelo.github.io/PeladeirosFTV/jogos.html" target="_blank">👉 Ver site atualizado</a></p>
+        <br>
+        <button class="btn btn-ghost" onclick="reset()" style="max-width:200px;margin:0 auto">+ Novo upload</button>
+    </div>
+
+</div>
+
+<script>
+    // ── CONFIG ─────────────────────────────────────────────────────
+    // Troca pela URL do seu deploy no Vercel depois de publicar
+    const API_URL = '/api/processar';
+
+    let imgB64 = null, imgMime = null, parsedData = null;
+
+    // ── FILE INPUT ─────────────────────────────────────────────────
+    document.getElementById('fileInput').addEventListener('change', e => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = ev => {
+            const result = ev.target.result;
+            imgB64  = result.split(',')[1];
+            imgMime = file.type;
+            const img = document.getElementById('previewImg');
+            img.src = result;
+            img.style.display = 'block';
+            document.getElementById('dropContent').style.display = 'none';
+            document.getElementById('btnInterpretar').disabled = false;
+        };
+        reader.readAsDataURL(file);
+    });
+
+    // drag & drop
+    const dz = document.getElementById('dropZone');
+    dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('over'); });
+    dz.addEventListener('dragleave', () => dz.classList.remove('over'));
+    dz.addEventListener('drop', e => {
+        e.preventDefault(); dz.classList.remove('over');
+        const file = e.dataTransfer.files[0];
+        if (file) document.getElementById('fileInput').files = e.dataTransfer.files;
+        document.getElementById('fileInput').dispatchEvent(new Event('change'));
+    });
+
+    // ── INTERPRETAR ────────────────────────────────────────────────
+    document.getElementById('btnInterpretar').addEventListener('click', async () => {
+        setStep(2); showPanel('loading'); setMsg('Analisando planilha com IA...');
+        try {
+            const res = await fetch(API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ acao: 'interpretar', imageBase64: imgB64, imageMime: imgMime })
+            });
+            const json = await res.json();
+            if (!res.ok || !json.ok) throw new Error(json.error || 'Erro desconhecido');
+
+            parsedData = json.data;
+            renderConfirm(parsedData);
+            setStep(3); showPanel('confirm');
+        } catch (err) {
+            showErr(err.message); showPanel('upload'); setStep(1);
+        }
+    });
+
+    // ── RENDER CONFIRM ─────────────────────────────────────────────
+    function renderConfirm(d) {
+        let h = `<div class="data-tag">📅 ${d.data}</div>`;
+
+        if (d.convidados?.length) {
+            h += `<div class="alert-info alert show" style="margin-bottom:14px">
+                👥 Convidados (sem ranking): <strong>${d.convidados.join(', ')}</strong>
+            </div>`;
+        }
+
+        h += `<div class="count"><strong>${d.jogos.length}</strong> jogos identificados</div>`;
+
+        for (let i = 0; i < d.jogos.length; i++) {
+            const j = d.jogos[i];
+            const [sw, sl] = j.p.split('x').map(s => parseInt(s));
+            h += `<div class="jogo">
+                <span class="jogo-n">#${i+1}</span>
+                <span class="jogo-t w">${j.t1}</span>
+                <span class="placar"><span class="sw">${sw}</span> x <span class="sl">${sl}</span></span>
+                <span class="jogo-t l">${j.t2}</span>
+            </div>`;
+        }
+
+        if (d.wins && Object.keys(d.wins).length) {
+            h += `<hr class="divider"><div class="section-sm">🏅 Vitórias a adicionar</div>`;
+            Object.entries(d.wins).sort((a,b)=>b[1]-a[1]).forEach(([n,v]) => {
+                h += `<div class="rank-item"><span>${n}</span><span class="rank-delta">+${v}</span></div>`;
+            });
+        }
+
+        document.getElementById('confirmContent').innerHTML = h;
+        document.getElementById('btnPublicar').onclick = publicar;
+    }
+
+    // ── PUBLICAR ───────────────────────────────────────────────────
+    async function publicar() {
+        setStep(4); showPanel('loading'); setMsg('Publicando no GitHub...');
+        try {
+            const res = await fetch(API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ acao: 'publicar', dados: parsedData })
+            });
+            const json = await res.json();
+            if (!res.ok || !json.ok) throw new Error(json.error || 'Erro ao publicar');
+            showPanel('success');
+        } catch (err) {
+            showErr(err.message); showPanel('confirm'); setStep(3);
+        }
+    }
+
+    // ── HELPERS ────────────────────────────────────────────────────
+    function showPanel(name) {
+        document.getElementById('panelUpload').style.display   = name==='upload'  ? 'block' : 'none';
+        document.getElementById('panelLoading').className      = name==='loading' ? 'loading show' : 'loading';
+        document.getElementById('panelConfirm').style.display  = name==='confirm' ? 'block' : 'none';
+        document.getElementById('panelSuccess').className      = name==='success' ? 'success show' : 'success';
+    }
+
+    function setStep(n) {
+        for (let i=1;i<=4;i++) {
+            const el = document.getElementById(`s${i}`);
+            el.classList.remove('active','done');
+            if (i<n) el.classList.add('done');
+            if (i===n) el.classList.add('active');
+        }
+    }
+
+    function setMsg(m) { document.getElementById('loadingMsg').textContent = m; }
+
+    function showErr(msg) {
+        const b = document.getElementById('alertBox');
+        b.className = 'alert alert-err show';
+        b.textContent = '❌ ' + msg;
+        setTimeout(()=>b.classList.remove('show'), 6000);
+    }
+
+    function reset() {
+        imgB64=null; imgMime=null; parsedData=null;
+        document.getElementById('fileInput').value='';
+        document.getElementById('previewImg').style.display='none';
+        document.getElementById('dropContent').style.display='block';
+        document.getElementById('btnInterpretar').disabled=true;
+        setStep(1); showPanel('upload');
+    }
+
+    showPanel('upload');
+</script>
+</body>
+</html>
