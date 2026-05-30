@@ -105,6 +105,21 @@
         .success h2 { color: #22c55e; font-size: 22px; margin-bottom: 8px; }
         .success p { color: #888; font-size: 14px; margin-bottom: 6px; }
         .success a { color: #f5c518; font-weight: 600; text-decoration: none; }
+
+        /* EDIT MODE */
+        .card-title-row { display: flex; align-items: center; justify-content: space-between; }
+        .btn-edit { background: none; border: none; cursor: pointer; font-size: 18px; padding: 2px 6px; border-radius: 6px; transition: background 0.2s; line-height: 1; }
+        .btn-edit:hover { background: rgba(255,255,255,0.07); }
+        .btn-save-edit { background: #f5c518 !important; color: #000 !important; font-size: 11px !important; font-weight: 700; padding: 5px 12px !important; border-radius: 6px; letter-spacing: 0.5px; }
+        .btn-save-edit:hover { background: #ffd740 !important; }
+        .edit-input { background: #111; border: 1px solid #333; color: #f0f0f0; border-radius: 6px; padding: 4px 8px; font-size: 13px; font-family: inherit; min-width: 0; }
+        .edit-input:focus { outline: none; border-color: #f5c518; }
+        .inp-t { flex: 1; }
+        .inp-p { width: 72px; text-align: center; font-family: monospace; flex-shrink: 0; }
+        .btn-del { background: none; border: none; cursor: pointer; font-size: 16px; padding: 2px 6px; border-radius: 6px; color: #ef4444; transition: background 0.2s; flex-shrink: 0; }
+        .btn-del:hover { background: rgba(239,68,68,0.12); }
+        .jogo-edit-row { display: flex; align-items: center; gap: 6px; padding: 7px 10px; background: #111; border: 1px solid #1e1e1e; border-radius: 8px; margin-bottom: 7px; }
+        .jogo-n-edit { font-size: 10px; color: #444; width: 22px; flex-shrink: 0; }
     </style>
 </head>
 <body>
@@ -153,7 +168,10 @@
     <!-- CONFIRMAR -->
     <div id="panelConfirm" style="display:none">
         <div class="card">
-            <div class="card-title">✅ Confirmar jogos</div>
+            <div class="card-title card-title-row">
+                <span>✅ Confirmar jogos</span>
+                <button class="btn-edit" id="btnEdit" onclick="toggleEdit()">✏️</button>
+            </div>
             <div id="confirmContent"></div>
             <div class="btn-row">
                 <button class="btn btn-ghost" onclick="reset()">↩ Refazer</button>
@@ -180,6 +198,7 @@
     const API_URL = '/api/processar';
 
     let imgB64 = null, imgMime = null, parsedData = null;
+    let editMode = false;
 
     // ── FILE INPUT ─────────────────────────────────────────────────
     document.getElementById('fileInput').addEventListener('change', e => {
@@ -232,6 +251,41 @@
 
     // ── RENDER CONFIRM ─────────────────────────────────────────────
     function renderConfirm(d) {
+        const btnEdit = document.getElementById('btnEdit');
+        if (editMode) {
+            btnEdit.textContent = 'SALVAR EDIÇÕES';
+            btnEdit.onclick = saveEdit;
+            btnEdit.classList.add('btn-save-edit');
+
+            let h = `<input class="edit-input" id="editData" value="${d.data}" style="margin-bottom:14px;max-width:160px">`;
+
+            if (d.convidados?.length) {
+                h += `<div class="alert-info alert show" style="margin-bottom:14px">
+                    👥 Convidados (sem ranking): <strong>${d.convidados.join(', ')}</strong>
+                </div>`;
+            }
+
+            h += `<div class="count"><strong>${d.jogos.length}</strong> jogos identificados</div>`;
+
+            for (let i = 0; i < d.jogos.length; i++) {
+                const j = d.jogos[i];
+                h += `<div class="jogo-edit-row">
+                    <span class="jogo-n-edit">#${i+1}</span>
+                    <input class="edit-input inp-t" value="${j.t1}" placeholder="Time 1">
+                    <input class="edit-input inp-p" value="${j.p}" placeholder="0 x 0">
+                    <input class="edit-input inp-t" value="${j.t2}" placeholder="Time 2">
+                    <button class="btn-del" onclick="deleteJogo(${i})" title="Deletar jogo">🗑️</button>
+                </div>`;
+            }
+
+            document.getElementById('confirmContent').innerHTML = h;
+            return;
+        }
+
+        btnEdit.textContent = '✏️';
+        btnEdit.onclick = toggleEdit;
+        btnEdit.classList.remove('btn-save-edit');
+
         let h = `<div class="data-tag">📅 ${d.data}</div>`;
 
         if (d.convidados?.length) {
@@ -262,6 +316,46 @@
 
         document.getElementById('confirmContent').innerHTML = h;
         document.getElementById('btnPublicar').onclick = publicar;
+    }
+
+    // ── EDIT HELPERS ───────────────────────────────────────────────
+    function toggleEdit() {
+        if (!confirm('Tem certeza que deseja editar os jogos?')) return;
+        editMode = true;
+        renderConfirm(parsedData);
+    }
+
+    function readEditsFromDOM() {
+        const dataInput = document.getElementById('editData');
+        if (dataInput) parsedData.data = dataInput.value.trim();
+        const rows = document.querySelectorAll('.jogo-edit-row');
+        const inputs = Array.from(rows).map(r => r.querySelectorAll('.inp-t, .inp-p'));
+        parsedData.jogos = Array.from(rows).map(r => {
+            const cols = r.querySelectorAll('input');
+            return { t1: cols[0].value.trim(), p: cols[1].value.trim(), t2: cols[2].value.trim() };
+        });
+    }
+
+    function saveEdit() {
+        readEditsFromDOM();
+        const wins = {};
+        const convidados = (parsedData.convidados || []).map(n => n.toLowerCase());
+        for (const jogo of parsedData.jogos) {
+            for (const nome of jogo.t1.split('/').map(n => n.trim())) {
+                if (!convidados.some(c => nome.toLowerCase().includes(c))) {
+                    wins[nome] = (wins[nome] || 0) + 1;
+                }
+            }
+        }
+        parsedData.wins = wins;
+        editMode = false;
+        renderConfirm(parsedData);
+    }
+
+    function deleteJogo(i) {
+        readEditsFromDOM();
+        parsedData.jogos.splice(i, 1);
+        renderConfirm(parsedData);
     }
 
     // ── PUBLICAR ───────────────────────────────────────────────────
@@ -308,7 +402,7 @@
     }
 
     function reset() {
-        imgB64=null; imgMime=null; parsedData=null;
+        imgB64=null; imgMime=null; parsedData=null; editMode=false;
         document.getElementById('fileInput').value='';
         document.getElementById('previewImg').style.display='none';
         document.getElementById('dropContent').style.display='block';
