@@ -120,9 +120,35 @@
         .btn-del:hover { background: rgba(239,68,68,0.12); }
         .jogo-edit-row { display: flex; align-items: center; gap: 6px; padding: 7px 10px; background: #111; border: 1px solid #1e1e1e; border-radius: 8px; margin-bottom: 7px; }
         .jogo-n-edit { font-size: 10px; color: #444; width: 22px; flex-shrink: 0; }
+
+        /* LOGIN */
+        #loginOverlay { position: fixed; inset: 0; background: #0f0f0f; display: flex; align-items: center; justify-content: center; z-index: 9999; padding: 20px; }
+        .login-box { background: #1a1a1a; border: 1px solid #252525; border-radius: 16px; padding: 36px 28px; width: 100%; max-width: 360px; }
+        .login-logo { font-size: 16px; font-weight: 700; color: #f5c518; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+        .login-sub { font-size: 13px; color: #555; margin-bottom: 28px; }
+        .login-label { display: block; font-size: 11px; color: #666; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+        .login-input { width: 100%; background: #111; border: 1px solid #2a2a2a; color: #f0f0f0; border-radius: 8px; padding: 11px 14px; font-size: 14px; font-family: inherit; margin-bottom: 16px; box-sizing: border-box; }
+        .login-input:focus { outline: none; border-color: #f5c518; }
+        .login-err { color: #fca5a5; font-size: 13px; text-align: center; margin-bottom: 14px; min-height: 18px; }
     </style>
 </head>
 <body>
+
+<!-- LOGIN -->
+<div id="loginOverlay">
+    <div class="login-box">
+        <div class="login-logo">Peladeiros FTV</div>
+        <div class="login-sub">Painel administrativo</div>
+        <label class="login-label" for="loginUser">Usuário</label>
+        <input class="login-input" type="text" id="loginUser" autocomplete="username" placeholder="usuário">
+        <label class="login-label" for="loginPass">Senha</label>
+        <input class="login-input" type="password" id="loginPass" autocomplete="current-password" placeholder="••••••••">
+        <div class="login-err" id="loginErr"></div>
+        <button class="btn btn-yellow" id="btnLogin">Entrar</button>
+    </div>
+</div>
+
+<div id="app" style="display:none">
 
 <header>
     <h1>Peladeiros FTV <span>— Admin</span></h1>
@@ -192,7 +218,53 @@
 
 </div>
 
+</div><!-- /#app -->
+
 <script>
+    // ── LOGIN ──────────────────────────────────────────────────────
+    if (sessionStorage.getItem('admin_auth') === '1') showApp();
+
+    document.getElementById('btnLogin').addEventListener('click', doLogin);
+    document.getElementById('loginPass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+    document.getElementById('loginUser').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('loginPass').focus(); });
+
+    async function doLogin() {
+        const user = document.getElementById('loginUser').value.trim();
+        const pass = document.getElementById('loginPass').value;
+        const errEl = document.getElementById('loginErr');
+        errEl.textContent = '';
+        if (!user || !pass) { errEl.textContent = 'Preencha usuário e senha'; return; }
+
+        const btn = document.getElementById('btnLogin');
+        btn.disabled = true; btn.textContent = 'Verificando...';
+
+        try {
+            const res  = await fetch('/api/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user, password: pass })
+            });
+            const json = await res.json();
+            if (json.ok) {
+                sessionStorage.setItem('admin_auth', '1');
+                showApp();
+            } else {
+                errEl.textContent = json.error || 'Credenciais inválidas';
+                btn.disabled = false; btn.textContent = 'Entrar';
+                document.getElementById('loginPass').value = '';
+                document.getElementById('loginPass').focus();
+            }
+        } catch {
+            errEl.textContent = 'Erro de conexão';
+            btn.disabled = false; btn.textContent = 'Entrar';
+        }
+    }
+
+    function showApp() {
+        document.getElementById('loginOverlay').style.display = 'none';
+        document.getElementById('app').style.display = 'block';
+    }
+
     // ── CONFIG ─────────────────────────────────────────────────────
     // Troca pela URL do seu deploy no Vercel depois de publicar
     const API_URL = '/api/processar';
